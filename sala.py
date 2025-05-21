@@ -26,12 +26,13 @@ class room():
         while True:
             try:
                 # if tamanho da lista de sockets diferente, faz a conexao nessa porra
-                ip_nova_conexao = self.listas_ip[-1]
+                if len(self.listas_ip) != 0:
+                    ip_nova_conexao = self.listas_ip[-1]
 
-                if ip_nova_conexao is not None and ip_nova_conexao not in self.sockets_connect:
-                    
-                    subscriber.connect(f"tcp://{ip_nova_conexao}:6001")
-                    self.sockets_connect[ip_nova_conexao] = True
+                    if ip_nova_conexao is not None and ip_nova_conexao not in self.sockets_connect:
+                        
+                        subscriber.connect(f"tcp://{ip_nova_conexao}:6001")
+                        self.sockets_connect[ip_nova_conexao] = True
 
                 msg = subscriber.recv_multipart()
 
@@ -78,7 +79,12 @@ class room():
 
         msg = b"DISCOVER_ROOM" + b"|" + bytes(str(self.sala_id), 'utf-8')
 
+        count = 0
         for _ in range(5):
+            if count == 0:
+                print("Mandando em broadcast pela primeira vez, vamo achar alguem!")
+                count += 1
+                
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             
