@@ -23,8 +23,13 @@ def criar_sala(tipo: int):
 
         p_thread = Thread(target=sala.publisher_thread)
         s_thread = Thread(target=sala.subscriber_thread)
+        b_thread = Thread(target=sala.broadcast_presenca)
+        l_thread = Thread(target=sala.listener_to_peer)
+
         p_thread.start()
         s_thread.start()
+        b_thread.start()
+        l_thread.start()
             
         pipe = zpipe(ctx)
             
@@ -33,9 +38,6 @@ def criar_sala(tipo: int):
     
         publisher = ctx.socket(zmq.XPUB)
         publisher.bind("tcp://*:6001")
-    
-        l_thread = Thread(target=sala.listener_thread, args=(pipe[1],))
-        l_thread.start()
     
         try:
             monitored_queue(subscriber, publisher, pipe[0], b'pub', b'sub')
