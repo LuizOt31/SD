@@ -29,7 +29,9 @@ class room():
                 ip_nova_conexao = self.listas_ip[-1]
 
                 if ip_nova_conexao is not None and ip_nova_conexao not in self.sockets_connect:
-                    self.sockets_connect[ip_nova_conexao] = subscriber.connect(f"tcp://{ip_nova_conexao}:6001")
+                    
+                    subscriber.connect(f"tcp://{ip_nova_conexao}:6001")
+                    self.sockets_connect[ip_nova_conexao] = True
 
                 msg = subscriber.recv_multipart()
 
@@ -46,7 +48,7 @@ class room():
         ctx = zmq.Context.instance()
 
         publisher = ctx.socket(zmq.PUB)
-        publisher.bin("tcp://localhost:6000")
+        publisher.bind("tcp://localhost:6000")
 
         while True:
             msg = input()
@@ -74,12 +76,15 @@ class room():
         A porta para envio de broadcast é 6002 por default
         '''
 
-        msg = b"DISCOVER_ROOM" + b"|" + bytes(self.sala_id)
-        
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        
-        s.sendto(msg, ("<broadcast>", port))
+        msg = b"DISCOVER_ROOM" + b"|" + bytes(str(self.sala_id), 'utf-8')
+
+        for _ in range(5):
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            
+            s.sendto(msg, ("<broadcast>", port))
+
+            time.sleep(1)
         
     def listener_to_peer(self, port=6002) -> None:
         '''
@@ -96,10 +101,14 @@ class room():
         
         while True:
             msg, addr = s.recvfrom(1024)
-            msg = str(msg.split(b"|"))
-            
-            if msg[0] == "DISCOVER_ROOM" and int(msg[1]) == self.sala_id:
-                self.listas_ip.append(addr[0])
+            msg_parts = msg.decode().split("|")
+
+            print("Recebi uma requisição de conexão!")
+
+            if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
+                if addr[0] not in self.listas_ip:
+                    self.listas_ip.append(addr[0])
+                    print(f"Alguém esta chamando, seu ip é: {addr[0]}")
 
                 # Após reconhecer que é a mesma sala, envia uma mensagem dizendo que irá se conectar, para que os dois se conectem
                 msg = b"ROOM_DISCOVERED" + b"|" + bytes(self.sala_id)
@@ -110,9 +119,11 @@ class room():
                 udp_socket.close()   
 
             # Checagem para ver se consegui descobrir outras pessoas na mesma sala que a minha
-            elif msg[0] == "ROOM_DISCOVERED" and int(msg[1]) == self.sala_id:
+            elif msg_parts[0] == "ROOM_DISCOVERED" and int(msg_parts[1]) == self.sala_id:
                 # addr[0] para passar apenas o IP, não precisamos da porta 6002, já que nos conectamos pela 6001
-                self.listas_ip.append(addr[0])
+                if addr[0] not in self.listas_ip:
+                    self.listas_ip.append(addr[0])
+                    print(f"Mandei e me mandaram de volta o chamado, o ip dele é {addr[0]}")
         
     
     def listener_thread (self, pipe):

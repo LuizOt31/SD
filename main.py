@@ -9,71 +9,56 @@ from zmq.devices import monitored_queue
 
 from zhelpers import zpipe
 
-def entrar_sala():
-    print("Em construção...")
-    ...
-
-
-def criar_sala(tipo: int):
+def sala(sala_id: int):
     ctx = zmq.Context.instance()
-    sala_id = randint(1000, 10000)
 
-    if tipo == 1:
-        sala = room(sala_id)
+    minha_sala = room(sala_id)
 
-        p_thread = Thread(target=sala.publisher_thread)
-        s_thread = Thread(target=sala.subscriber_thread)
-        b_thread = Thread(target=sala.broadcast_presenca)
-        l_thread = Thread(target=sala.listener_to_peer)
+    p_thread = Thread(target=minha_sala.publisher_thread)
+    s_thread = Thread(target=minha_sala.subscriber_thread)
+    b_thread = Thread(target=minha_sala.broadcast_presenca)
+    l_thread = Thread(target=minha_sala.listener_to_peer)
 
-        p_thread.start()
-        s_thread.start()
-        b_thread.start()
-        l_thread.start()
-            
-        pipe = zpipe(ctx)
-            
-        subscriber = ctx.socket(zmq.XSUB)
-        subscriber.connect("tcp://localhost:6000")
-    
-        publisher = ctx.socket(zmq.XPUB)
-        publisher.bind("tcp://*:6001")
-    
-        try:
-            monitored_queue(subscriber, publisher, pipe[0], b'pub', b'sub')
-        except KeyboardInterrupt:
-            print ("Interrupted")
+    p_thread.start()
+    s_thread.start()
+    b_thread.start()
+    l_thread.start()
+        
+    pipe = zpipe(ctx)
+        
+    subscriber = ctx.socket(zmq.XSUB)
+    subscriber.connect("tcp://localhost:6000")
 
-    else: # Corrijir futuramente
-        return
+    publisher = ctx.socket(zmq.XPUB)
+    publisher.bind("tcp://*:6001")
+
+    l_pipe = Thread(target=minha_sala.listener_thread, args=(pipe[1],))
+    l_pipe.start()
+
+
+    try:
+        monitored_queue(subscriber, publisher, pipe[0], b'pub', b'sub')
+    except KeyboardInterrupt:
+        print ("Interrupted")
+
 
 def main():
     '''
     Função principal que roda nosso "Skype"
 
-    Há duas opções:
-        * Entrar em uma sala
-        * Criar uma sala, que consequentemente, entra nela também
+    Para entrar em uma sala é preciso digitar um número. Todas as pessoas que digitarem esse número entrarão
+    na mesma chamada que você.
 
-    As salas podem ser de texto, voz e video. Será definido na hora que criar a sala.
+    As salas podem ser de texto, voz e video. Será definido na hora que criar a sala. (nao implementado, só futuramente...)
     '''
 
-    print("Digite o numero que deseja fazer")
-    print("1. Entrar em uma sala\n2. Criar uma sala")
-    aux = int(input())
+    print("Seja bem-vindo, digite o número da porta da sala que deseja se conectar")
+    num_sala = int(input())
 
-    if aux == 1:
-        entrar_sala()
-    elif aux == 2:
-        print("Sua sala será em que formato? (digite o número por favor)")
-        print("1. Texto\n2. Audio\n3. Video")
-        tipo_sala = int(input())
-
-        criar_sala(tipo_sala)
-    else:
-        print("Vai toma no CU, faz essa porra direito")
-        return
-
+    try:
+        sala(num_sala)
+    except KeyboardInterrupt:
+        print("Saindo...")
 
 if __name__ == "__main__":
     main()
