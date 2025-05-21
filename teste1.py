@@ -1,9 +1,7 @@
-from sala import room
-import time
-
+from teste2 import room
 from random import randint
 from threading import Thread
-
+import time
 import zmq
 from zmq.devices import monitored_queue
 
@@ -29,10 +27,10 @@ def criar_sala(tipo: int):
         pipe = zpipe(ctx)
             
         subscriber = ctx.socket(zmq.XSUB)
-        subscriber.connect("tcp://localhost:6000")
+        subscriber.connect("tcp://localhost:6001")
     
         publisher = ctx.socket(zmq.XPUB)
-        publisher.bind("tcp://*:6001")
+        publisher.bind("tcp://*:6000")
     
         l_thread = Thread(target=sala.listener_thread, args=(pipe[1],))
         l_thread.start()

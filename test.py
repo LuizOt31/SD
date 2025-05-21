@@ -16,7 +16,7 @@ from zhelpers import zpipe
 # The subscriber thread requests messages starting with
 # A and B, then reads and counts incoming messages.
 
-def subscriber_thread():
+def subscriber_thread(self):
     ctx = zmq.Context.instance()
 
     # Subscribe to "A" and "B"
@@ -42,7 +42,7 @@ def subscriber_thread():
 # publisher thread
 # The publisher sends random messages starting with A-J:
 
-def publisher_thread():
+def publisher_thread(self):
     ctx = zmq.Context.instance()
 
     publisher = ctx.socket(zmq.PUB)
