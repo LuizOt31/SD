@@ -94,17 +94,16 @@ class room():
         
         A porta para envio de broadcast é 6002 por default
         '''
-
         msg = b"DISCOVER_ROOM" + b"|" + str(self.sala_id).encode('utf-8') + b"|" + self.meu_ip.encode('utf-8')
 
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        
         count = 0
         for _ in range(5):
             if count == 0:
                 print("Mandando em broadcast pela primeira vez, vamo achar alguem!")
                 count += 1
-                
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             
             s.sendto(msg, ("<broadcast>", port))
 
