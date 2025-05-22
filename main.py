@@ -27,11 +27,11 @@ def sala(sala_id: int):
     pipe = zpipe(ctx)
 
     l_pipe = Thread(target=minha_sala.listener_thread, args=(pipe[1],))
-    l_pipe.start()
-    
+    l_pipe.start()  
+
     try:
         while True:
-            minha_sala.fila.put(input())
+            minha_sala.fila.put(input(">>>"))
             
     except KeyboardInterrupt:
         print("Interrupted")

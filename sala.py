@@ -41,8 +41,7 @@ class room():
                         # Todos os sockets são registrados no poller, pois ele trata manejamento de vários sockets ao mesmo tempo
                         poller.register(self.sockets_connect[ip], zmq.POLLIN)
                         
-                        '''ESSE PRINT TA ERRADO, NAO VAI DAR CERTO, FAVOR MUDAR PARA COLOCAR OUTRA QUEUE'''
-                        print(f"Conectado ao ip: {ip}")
+                        print(f"[SYSTEM] Conectado ao ip: {ip}")
                     except zmq.ZMQError:
                         continue
             
@@ -51,7 +50,7 @@ class room():
             socks = dict(poller.poll(100))
             if socks:
                 for sock in socks:
-                    if sock in socket_to_ip:    
+                    if sock in socket_to_ip:
                         print(f"{socket_to_ip[socket]}: {sock.recv_multipart()}")
 
     def publisher_thread(self):
@@ -101,6 +100,8 @@ class room():
 
             time.sleep(1)
         
+        return
+        
     def listener_to_peer(self, port=6002) -> None:
         '''
         Função que espera requisições para entrar na mesma sala, recebe as duas coisas citadas na função broadcast_presenca()
@@ -114,31 +115,34 @@ class room():
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(('', port))
         
-        while True:
-            msg, addr = s.recvfrom(1024)
-            msg_parts = msg.decode().split("|")
+        try:
+            while True:
+                msg, addr = s.recvfrom(1024)
+                msg_parts = msg.decode().split("|")
 
-            print("Recebi uma requisição de conexão!")
+                print("Recebi uma requisição de conexão!")
 
-            if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
-                if addr[0] not in self.lista_ip:
-                    self.lista_ip.append(addr[0])
-                    print(f"Alguém esta chamando, seu ip é: {addr[0]}")
+                if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
+                    if addr[0] not in self.lista_ip:
+                        self.lista_ip.append(addr[0])
+                        print(f"Alguém esta chamando, seu ip é: {addr[0]}")
 
-                # Após reconhecer que é a mesma sala, envia uma mensagem dizendo que irá se conectar, para que os dois se conectem
-                msg = b"ROOM_DISCOVERED" + b"|" + bytes(self.sala_id)
+                    # Após reconhecer que é a mesma sala, envia uma mensagem dizendo que irá se conectar, para que os dois se conectem
+                    msg = b"ROOM_DISCOVERED" + b"|" + bytes(self.sala_id)
 
-                udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                udp_socket.sendto(msg, addr)
+                    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    udp_socket.sendto(msg, addr)
 
-                udp_socket.close()   
+                    udp_socket.close()   
 
-            # Checagem para ver se consegui descobrir outras pessoas na mesma sala que a minha
-            elif msg_parts[0] == "ROOM_DISCOVERED" and int(msg_parts[1]) == self.sala_id:
-                # addr[0] para passar apenas o IP, não precisamos da porta 6002, já que nos conectamos pela 6001
-                if addr[0] not in self.lista_ip:
-                    self.lista_ip.append(addr[0])
-                    print(f"Mandei e me mandaram de volta o chamado, o ip dele é {addr[0]}")
+                # Checagem para ver se consegui descobrir outras pessoas na mesma sala que a minha
+                elif msg_parts[0] == "ROOM_DISCOVERED" and int(msg_parts[1]) == self.sala_id:
+                    # addr[0] para passar apenas o IP, não precisamos da porta 6002, já que nos conectamos pela 6001
+                    if addr[0] not in self.lista_ip:
+                        self.lista_ip.append(addr[0])
+                        print(f"Mandei e me mandaram de volta o chamado, o ip dele é {addr[0]}")
+        except KeyboardInterrupt:
+            pass
         
     def listener_thread (self, pipe):
     
