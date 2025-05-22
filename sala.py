@@ -51,7 +51,7 @@ class room():
             if socks:
                 for sock in socks:
                     if sock in socket_to_ip:
-                        print(f"{socket_to_ip[socket]}: {sock.recv_multipart()}")
+                        print(f"{socket_to_ip[sock]}: {sock.recv_multipart()}")
 
     def publisher_thread(self) -> None:
         '''
@@ -79,7 +79,7 @@ class room():
                         raise
                 time.sleep(0.1)         # Não força tanto a CPU
             
-    def broadcast_presenca(self, port=52222) -> None:
+    def broadcast_presenca(self, port=52223) -> None:
         '''
         Sempre que você estiver entrando em uma sala, um broadcast será feito para todos dispositivos na rede.
         
