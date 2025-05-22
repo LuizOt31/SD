@@ -121,7 +121,7 @@ class room():
         '''
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # cpa o problema é aqui
         s.bind(('', port))
         
         try:
@@ -132,6 +132,10 @@ class room():
                 print("Recebi uma requisição de conexão!")
                 print(f"msg_parts[0]: {msg_parts[0]}")
                 print(f"msg_parts[1]: {msg_parts[1]}")
+                meu_ip = socket.gethostbyname(socket.gethostname())
+                if msg_parts[0] == meu_ip:
+                    print("MEU IP AQUI KRL")
+                    continue
                 if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
                     if addr[0] not in self.lista_ip:
                         self.lista_ip.append(addr[0])
