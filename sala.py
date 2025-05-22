@@ -129,7 +129,8 @@ class room():
                 msg, addr_outroPeer = s.recvfrom(1024)
                 msg_parts = msg.decode().split("|")
 
-                if addr_outroPeer[0] != '127.0.1.1' and addr_outroPeer[0] != self.meu_ip:
+                if addr_outroPeer[0] != '127.0.1.1' and addr_outroPeer[0] != '127.0.0.1' and addr_outroPeer[0] != self.meu_ip:
+
                     print("Recebi uma requisição de conexão!")
                     print(f"msg_parts[0]: {msg_parts[0]}")
                     print(f"msg_parts[1]: {msg_parts[1]}")
