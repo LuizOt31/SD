@@ -22,7 +22,7 @@ def sala(sala_id: int) -> None:
 
     try:
         while True:
-            minha_sala.fila.put(input(">>>"))
+            minha_sala.fila.put(f"{minha_sala.sala_id} " + input(">>>"))
             
     except KeyboardInterrupt:
         print("Interrupted")
