@@ -54,21 +54,30 @@ class room():
                         print(f"{socket_to_ip[socket]}: {sock.recv_multipart()}")
 
     def publisher_thread(self):
+        '''
+        Publisher é quem publica as mensagens enviadas por esse processo. Ele apenas publica, é função 
+        do subscriber dos outros peers se ligar e ouvir as mensagens.
+
+        a função tem um loop infinito e fica tentando pegar o elemento da FIFO para mandar pro socket
+        '''
         ctx = zmq.Context.instance()
 
         publisher = ctx.socket(zmq.PUB)
         publisher.bind("tcp://*:6000")
 
         while True:
-            msg = self.fila.get()
-            try:
-                publisher.send(msg.encode('utf-8'))
-            except zmq.ZMQError as e:
-                if e.errno == zmq.ETERM:
-                    break           # Interrupted
-                else:
-                    raise
-            time.sleep(0.1)         # Wait for 1/10th second
+            if not self.fila.empty():
+
+                # Pega o primeiro elemento da FIFO para enviar
+                msg = self.fila.get()
+                try:
+                    publisher.send(msg.encode('utf-8'))
+                except zmq.ZMQError as e:
+                    if e.errno == zmq.ETERM:
+                        break           # Interrupted
+                    else:
+                        raise
+                time.sleep(0.1)         # Não força tanto a CPU
             
     def broadcast_presenca(self, port=6002) -> None:
         '''
