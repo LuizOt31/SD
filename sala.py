@@ -32,7 +32,7 @@ class room():
                         # caso tenha algum ip não mapeado para socket ainda, o código abaixo mapeia
                         # aux_socket é uma variavel auxiliar
                         aux_socket = ctx.socket(zmq.SUB)
-                        aux_socket.connect(f"tcp://{ip}:6000")
+                        aux_socket.connect(f"tcp://{ip}:52222")
                         aux_socket.setsockopt(zmq.SUBSCRIBE, str(self.sala_id).encode('utf-8'))
                         
                         self.sockets_connect[ip] = aux_socket
@@ -63,7 +63,7 @@ class room():
         ctx = zmq.Context.instance()
 
         publisher = ctx.socket(zmq.PUB)
-        publisher.bind("tcp://*:6000")
+        publisher.bind("tcp://*:52222")
 
         while True:
             if not self.fila.empty():
@@ -79,7 +79,7 @@ class room():
                         raise
                 time.sleep(0.1)         # Não força tanto a CPU
             
-    def broadcast_presenca(self, port=6002) -> None:
+    def broadcast_presenca(self, port=52222) -> None:
         '''
         Sempre que você estiver entrando em uma sala, um broadcast será feito para todos dispositivos na rede.
         
@@ -111,7 +111,7 @@ class room():
         
         return
         
-    def listener_to_peer(self, port=6002) -> None:
+    def listener_to_peer(self, port=52223) -> None:
         '''
         Função que espera requisições para entrar na mesma sala, recebe as duas coisas citadas na função broadcast_presenca()
 
@@ -146,7 +146,7 @@ class room():
 
                 # Checagem para ver se consegui descobrir outras pessoas na mesma sala que a minha
                 elif msg_parts[0] == "ROOM_DISCOVERED" and int(msg_parts[1]) == self.sala_id:
-                    # addr[0] para passar apenas o IP, não precisamos da porta 6002, já que nos conectamos pela 6001
+                    # addr[0] para passar apenas o IP, não precisamos da porta 52223, já que nos conectamos pela 6001
                     if addr[0] not in self.lista_ip:
                         self.lista_ip.append(addr[0])
                         print(f"Mandei e me mandaram de volta o chamado, o ip dele é {addr[0]}")
