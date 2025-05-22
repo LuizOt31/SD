@@ -127,36 +127,38 @@ class room():
         
         try:
             while True:
-                msg, addr = s.recvfrom(1024)
+                msg, addr_outroPeer = s.recvfrom(1024)
                 msg_parts = msg.decode().split("|")
 
-                print("Recebi uma requisição de conexão!")
-                print(f"msg_parts[0]: {msg_parts[0]}")
-                print(f"msg_parts[1]: {msg_parts[1]}")
-                print(f"msg_parts[2]: {msg_parts[2]}")
-                # if msg_parts[2] == self.meu_ip or msg_parts == '127.0.1.1':
-                #     print("MEU IP AQUI KRL")
-                #     continue
-                if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
-                    if addr[0] not in self.lista_ip:
-                        self.lista_ip.append(addr[0])
-                        print(f"Alguém esta chamando, seu ip é: {addr[0]}")
+                if addr_outroPeer[0] != '127.0.1.1' and addr_outroPeer[0] != self.meu_ip:
+                    print("Recebi uma requisição de conexão!")
+                    print(f"msg_parts[0]: {msg_parts[0]}")
+                    print(f"msg_parts[1]: {msg_parts[1]}")
+                    print(f"addr do ser humano: {addr_outroPeer}")
+    
+                    if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
+                        if addr_outroPeer[0] not in self.lista_ip:
+                            self.lista_ip.append(addr_outroPeer[0])
+                            print(f"Alguém esta chamando, seu ip é: {addr_outroPeer[0]}")
 
-                    # Após reconhecer que é a mesma sala, envia uma mensagem dizendo que irá se conectar, para que os dois se conectem
-                    msg = b"ROOM_DISCOVERED" + b"|" + str(self.sala_id).encode('utf-8') + b"|" + self.meu_ip.encode('utf-8')
+                        # Após reconhecer que é a mesma sala, envia uma mensagem dizendo que irá se conectar, para que os dois se conectem
+                        msg = b"ROOM_DISCOVERED" + b"|" + str(self.sala_id).encode('utf-8') + b"|" + self.meu_ip.encode('utf-8')
 
-                    addr_outroPeer = (msg_parts[2], port)
-                    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                    udp_socket.sendto(msg, addr_outroPeer)
+                        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                        
+                        for _ in range(5):
+                            udp_socket.sendto(msg, addr_outroPeer)
 
-                    udp_socket.close()   
+                        udp_socket.close()   
 
-                # Checagem para ver se consegui descobrir outras pessoas na mesma sala que a minha
-                elif msg_parts[0] == "ROOM_DISCOVERED" and int(msg_parts[1]) == self.sala_id:
-                    # addr[0] para passar apenas o IP, não precisamos da porta 52223, já que nos conectamos pela 6001
-                    if addr[0] not in self.lista_ip:
-                        self.lista_ip.append(addr[0])
-                        print(f"Mandei e me mandaram de volta o chamado, o ip dele é {addr[0]}")
+                    # Checagem para ver se consegui descobrir outras pessoas na mesma sala que a minha
+                    elif msg_parts[0] == "ROOM_DISCOVERED" and int(msg_parts[1]) == self.sala_id:
+                        # addr[0] para passar apenas o IP, não precisamos da porta 52223, já que nos conectamos pela 6001
+                        if addr_outroPeer[0] not in self.lista_ip:
+                            self.lista_ip.append(addr_outroPeer[0])
+                            print(f"Mandei e me mandaram de volta o chamado, o ip dele é {addr_outroPeer[0]}")
+        
         except KeyboardInterrupt:
             pass
         
