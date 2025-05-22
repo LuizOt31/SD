@@ -134,10 +134,10 @@ class room():
                 print(f"msg_parts[0]: {msg_parts[0]}")
                 print(f"msg_parts[1]: {msg_parts[1]}")
                 print(f"msg_parts[2]: {msg_parts[2]}")
-                if msg_parts[2] == self.meu_ip or msg_parts == '127.0.1.1':
-                    print("MEU IP AQUI KRL")
-                    continue
-                elif msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
+                # if msg_parts[2] == self.meu_ip or msg_parts == '127.0.1.1':
+                #     print("MEU IP AQUI KRL")
+                #     continue
+                if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
                     if addr[0] not in self.lista_ip:
                         self.lista_ip.append(addr[0])
                         print(f"Alguém esta chamando, seu ip é: {addr[0]}")
