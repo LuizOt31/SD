@@ -12,7 +12,6 @@ class room():
         self.fila = Queue()
         self.running = True
 
-
     def subscriber_thread(self):
         '''
         O subscriber é quem se conecta com outros peers. Cada ip que listener_to_peer() achar, essa função aqui
@@ -42,6 +41,7 @@ class room():
                         # Todos os sockets são registrados no poller, pois ele trata manejamento de vários sockets ao mesmo tempo
                         poller.register(self.sockets_connect[ip], zmq.POLLIN)
                         
+                        '''ESSE PRINT TA ERRADO, NAO VAI DAR CERTO, FAVOR MUDAR PARA COLOCAR OUTRA QUEUE'''
                         print(f"Conectado ao ip: {ip}")
                     except zmq.ZMQError:
                         continue
@@ -140,7 +140,6 @@ class room():
                     self.lista_ip.append(addr[0])
                     print(f"Mandei e me mandaram de volta o chamado, o ip dele é {addr[0]}")
         
-    
     def listener_thread (self, pipe):
     
         # Print everything that arrives on pipe
