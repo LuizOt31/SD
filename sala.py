@@ -11,6 +11,7 @@ class room():
         self.sockets_connect = {}
         self.fila = Queue()
         self.running = True
+        self.meu_ip = socket.gethostbyname(socket.gethostname())
 
     def subscriber_thread(self) -> None:
         '''
@@ -94,7 +95,7 @@ class room():
         A porta para envio de broadcast é 6002 por default
         '''
 
-        msg = b"DISCOVER_ROOM" + b"|" + str(self.sala_id).encode('utf-8')
+        msg = b"DISCOVER_ROOM" + b"|" + str(self.sala_id).encode('utf-8') + b"|" + self.meu_ip.encode('utf-8')
 
         count = 0
         for _ in range(5):
@@ -132,20 +133,21 @@ class room():
                 print("Recebi uma requisição de conexão!")
                 print(f"msg_parts[0]: {msg_parts[0]}")
                 print(f"msg_parts[1]: {msg_parts[1]}")
-                meu_ip = socket.gethostbyname(socket.gethostname())
-                if msg_parts[0] == meu_ip:
+                print(f"msg_parts[2]: {msg_parts[2]}")
+                if msg_parts[0] == self.meu_ip:
                     print("MEU IP AQUI KRL")
                     continue
-                if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
+                elif msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
                     if addr[0] not in self.lista_ip:
                         self.lista_ip.append(addr[0])
                         print(f"Alguém esta chamando, seu ip é: {addr[0]}")
 
                     # Após reconhecer que é a mesma sala, envia uma mensagem dizendo que irá se conectar, para que os dois se conectem
-                    msg = b"ROOM_DISCOVERED" + b"|" + bytes(self.sala_id)
+                    msg = b"ROOM_DISCOVERED" + b"|" + str(self.sala_id).encode('utf-8') + b"|" + self.meu_ip.encode('utf-8')
 
+                    addr_outroPeer = (msg_parts[3], port)
                     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                    udp_socket.sendto(msg, addr)
+                    udp_socket.sendto(msg, addr_outroPeer)
 
                     udp_socket.close()   
 
