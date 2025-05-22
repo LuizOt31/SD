@@ -1,58 +1,67 @@
+from queue import Queue
+
 import time
 import socket
-from random import randint
-from string import ascii_uppercase as uppercase
-from threading import Thread
-
 import zmq
-from zmq.devices import monitored_queue
-
-from zhelpers import zpipe
 
 class room():
     def __init__(self, sala_id):
         self.sala_id = sala_id
-        self.listas_ip = []
+        self.lista_ip = []
         self.sockets_connect = {}
+        self.fila = Queue()
+        self.running = True
 
 
     def subscriber_thread(self):
+        '''
+        O subscriber é quem se conecta com outros peers. Cada ip que listener_to_peer() achar, essa função aqui
+        irá criar um socket e se conectar a esse ip na porta 6000 para escutar o que ele está mandando.
+        
+        Isso é bom, pois dessa maneira é mais fácil de controlar as mensagens de cada peer conectado
+        '''
         ctx = zmq.Context.instance()
-
-        subscriber = ctx.socket(zmq.SUB)
-        subscriber.connect("tcp://localhost:6001")
-        subscriber.setsockopt(zmq.SUBSCRIBE, b"") # mudar esse b"", pois queremos que ai esteja a sala! self.sala
-
-        while True:
-            try:
-                # if tamanho da lista de sockets diferente, faz a conexao nessa porra
-                if len(self.listas_ip) != 0:
-                    ip_nova_conexao = self.listas_ip[-1]
-
-                    if ip_nova_conexao is not None and ip_nova_conexao not in self.sockets_connect:
+        socket_to_ip = {}
+        
+        poller = zmq.Poller()
+        
+        # continua enquanto a sala estiver viva
+        while self.running:
+            for ip in self.lista_ip:
+                if ip not in self.sockets_connect:
+                    try:
+                        # caso tenha algum ip não mapeado para socket ainda, o código abaixo mapeia
+                        # aux_socket é uma variavel auxiliar
+                        aux_socket = ctx.socket(zmq.SUB)
+                        aux_socket.connect(f"tcp://{ip}:6000")
+                        aux_socket.setsockopt(zmq.SUBSCRIBE, str(self.sala_id).encode('utf-8'))
                         
-                        subscriber.connect(f"tcp://{ip_nova_conexao}:6001")
-                        self.sockets_connect[ip_nova_conexao] = True
-
-                msg = subscriber.recv_multipart()
-
-                # Acho que aqui vai printar as mensagens recebidas
-                print(msg)
-
-            except zmq.ZMQError as e:
-                if e.errno == zmq.ETERM:
-                    break           # Interrupted
-                else:
-                    raise
+                        self.sockets_connect[ip] = aux_socket
+                        socket_to_ip[aux_socket] = ip
+                        
+                        # Todos os sockets são registrados no poller, pois ele trata manejamento de vários sockets ao mesmo tempo
+                        poller.register(self.sockets_connect[ip], zmq.POLLIN)
+                        
+                        print(f"Conectado ao ip: {ip}")
+                    except zmq.ZMQError:
+                        continue
+            
+            # poller.poll() espera 0.1s. Se nenhum socket obteve resposta dos outros peers, retorna {} (dicionario vazio)
+            # ou seja, só retorna os sockets que tiveram alguma resposta.
+            socks = dict(poller.poll(100))
+            if socks:
+                for sock in socks:
+                    if sock in socket_to_ip:    
+                        print(f"{socket_to_ip[socket]}: {sock.recv_multipart()}")
 
     def publisher_thread(self):
         ctx = zmq.Context.instance()
 
         publisher = ctx.socket(zmq.PUB)
-        publisher.bind("tcp://localhost:6000")
+        publisher.bind("tcp://*:6000")
 
         while True:
-            msg = input()
+            msg = self.fila.get()
             try:
                 publisher.send(msg.encode('utf-8'))
             except zmq.ZMQError as e:
@@ -77,7 +86,7 @@ class room():
         A porta para envio de broadcast é 6002 por default
         '''
 
-        msg = b"DISCOVER_ROOM" + b"|" + bytes(str(self.sala_id), 'utf-8')
+        msg = b"DISCOVER_ROOM" + b"|" + str(self.sala_id).encode('utf-8')
 
         count = 0
         for _ in range(5):
@@ -112,8 +121,8 @@ class room():
             print("Recebi uma requisição de conexão!")
 
             if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
-                if addr[0] not in self.listas_ip:
-                    self.listas_ip.append(addr[0])
+                if addr[0] not in self.lista_ip:
+                    self.lista_ip.append(addr[0])
                     print(f"Alguém esta chamando, seu ip é: {addr[0]}")
 
                 # Após reconhecer que é a mesma sala, envia uma mensagem dizendo que irá se conectar, para que os dois se conectem
@@ -127,8 +136,8 @@ class room():
             # Checagem para ver se consegui descobrir outras pessoas na mesma sala que a minha
             elif msg_parts[0] == "ROOM_DISCOVERED" and int(msg_parts[1]) == self.sala_id:
                 # addr[0] para passar apenas o IP, não precisamos da porta 6002, já que nos conectamos pela 6001
-                if addr[0] not in self.listas_ip:
-                    self.listas_ip.append(addr[0])
+                if addr[0] not in self.lista_ip:
+                    self.lista_ip.append(addr[0])
                     print(f"Mandei e me mandaram de volta o chamado, o ip dele é {addr[0]}")
         
     

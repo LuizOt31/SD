@@ -12,11 +12,12 @@ import zmq
 from zmq.devices import monitored_queue
 
 from zhelpers import zpipe
+from email.policy import strict
 
 # The subscriber thread requests messages starting with
 # A and B, then reads and counts incoming messages.
 
-def subscriber_thread(self):
+def subscriber_thread():
     ctx = zmq.Context.instance()
 
     # Subscribe to "A" and "B"
@@ -41,23 +42,26 @@ def subscriber_thread(self):
 
 # publisher thread
 # The publisher sends random messages starting with A-J:
-
-def publisher_thread(self):
+stri = ''
+def publisher_thread():
     ctx = zmq.Context.instance()
 
     publisher = ctx.socket(zmq.PUB)
     publisher.bind("tcp://*:6000")
 
     while True:
-        string = "%s-%05d" % (uppercase[randint(0,10)], randint(0,100000))
-        try:
-            publisher.send(string.encode('utf-8'))
-        except zmq.ZMQError as e:
-            if e.errno == zmq.ETERM:
-                break           # Interrupted
-            else:
-                raise
-        time.sleep(0.1)         # Wait for 1/10th second
+        if stri != '':
+            string = str(stri)
+            try:
+                publisher.send(string.encode('utf-8'))
+                
+            except zmq.ZMQError as e:
+                if e.errno == zmq.ETERM:
+                    break           # Interrupted
+                else:
+                    raise
+            stri = ''
+            time.sleep(0.1)         # Wait for 1/10th second
 
 
 # listener thread
@@ -75,7 +79,7 @@ def listener_thread (pipe):
             if e.errno == zmq.ETERM:
                 break           # Interrupted
 
-
+ 
 # main thread
 # The main task starts the subscriber and publisher, and then sets
 # itself up as a listening proxy. The listener runs as a child thread:
@@ -102,6 +106,8 @@ def main ():
 
     try:
         monitored_queue(subscriber, publisher, pipe[0], b'pub', b'sub')
+        while True:
+            stri = input()
     except KeyboardInterrupt:
         print ("Interrupted")
 

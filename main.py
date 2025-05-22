@@ -25,21 +25,16 @@ def sala(sala_id: int):
     l_thread.start()
         
     pipe = zpipe(ctx)
-        
-    subscriber = ctx.socket(zmq.XSUB)
-    subscriber.connect("tcp://localhost:6000")
-
-    publisher = ctx.socket(zmq.XPUB)
-    publisher.bind("tcp://*:6001")
 
     l_pipe = Thread(target=minha_sala.listener_thread, args=(pipe[1],))
     l_pipe.start()
-
-
+    
     try:
-        monitored_queue(subscriber, publisher, pipe[0], b'pub', b'sub')
+        while True:
+            minha_sala.fila.put(input())
+            
     except KeyboardInterrupt:
-        print ("Interrupted")
+        print("Interrupted")
 
 
 def main():
