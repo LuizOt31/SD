@@ -130,7 +130,8 @@ class room():
                 msg_parts = msg.decode().split("|")
 
                 print("Recebi uma requisição de conexão!")
-
+                print(f"msg_parts[0]: {msg_parts[0]}")
+                print(f"msg_parts[1]: {msg_parts[1]}")
                 if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
                     if addr[0] not in self.lista_ip:
                         self.lista_ip.append(addr[0])
