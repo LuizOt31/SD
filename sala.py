@@ -134,7 +134,7 @@ class room():
                 print(f"msg_parts[0]: {msg_parts[0]}")
                 print(f"msg_parts[1]: {msg_parts[1]}")
                 print(f"msg_parts[2]: {msg_parts[2]}")
-                if msg_parts[0] == self.meu_ip:
+                if msg_parts[2] == self.meu_ip or msg_parts == '127.0.1.1':
                     print("MEU IP AQUI KRL")
                     continue
                 elif msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
@@ -145,7 +145,7 @@ class room():
                     # Após reconhecer que é a mesma sala, envia uma mensagem dizendo que irá se conectar, para que os dois se conectem
                     msg = b"ROOM_DISCOVERED" + b"|" + str(self.sala_id).encode('utf-8') + b"|" + self.meu_ip.encode('utf-8')
 
-                    addr_outroPeer = (msg_parts[3], port)
+                    addr_outroPeer = (msg_parts[2], port)
                     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                     udp_socket.sendto(msg, addr_outroPeer)
 
