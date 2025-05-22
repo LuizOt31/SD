@@ -1,16 +1,12 @@
 from sala import room
-import time
-
-from random import randint
 from threading import Thread
 
 import zmq
-from zmq.devices import monitored_queue
 
-from zhelpers import zpipe
-
-def sala(sala_id: int):
-    ctx = zmq.Context.instance()
+def sala(sala_id: int) -> None:
+    '''
+    Criação da sala por aqui
+    '''
 
     minha_sala = room(sala_id)
 
@@ -22,12 +18,7 @@ def sala(sala_id: int):
     p_thread.start()
     s_thread.start()
     b_thread.start()
-    l_thread.start()
-        
-    pipe = zpipe(ctx)
-
-    l_pipe = Thread(target=minha_sala.listener_thread, args=(pipe[1],))
-    l_pipe.start()  
+    l_thread.start() 
 
     try:
         while True:
@@ -35,6 +26,7 @@ def sala(sala_id: int):
             
     except KeyboardInterrupt:
         print("Interrupted")
+        return
 
 
 def main():

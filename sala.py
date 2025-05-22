@@ -12,7 +12,7 @@ class room():
         self.fila = Queue()
         self.running = True
 
-    def subscriber_thread(self):
+    def subscriber_thread(self) -> None:
         '''
         O subscriber é quem se conecta com outros peers. Cada ip que listener_to_peer() achar, essa função aqui
         irá criar um socket e se conectar a esse ip na porta 6000 para escutar o que ele está mandando.
@@ -53,7 +53,7 @@ class room():
                     if sock in socket_to_ip:
                         print(f"{socket_to_ip[socket]}: {sock.recv_multipart()}")
 
-    def publisher_thread(self):
+    def publisher_thread(self) -> None:
         '''
         Publisher é quem publica as mensagens enviadas por esse processo. Ele apenas publica, é função 
         do subscriber dos outros peers se ligar e ouvir as mensagens.
