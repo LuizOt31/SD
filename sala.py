@@ -1,17 +1,24 @@
 from queue import Queue
-
+import numpy as np
 import time
 import socket
+import subprocess
+import cv2
 import zmq
 
 class room():
-    def __init__(self, sala_id):
+    def __init__(self, sala_id: int, tipo_sala = 1):
+        '''
+        sala_id = identificador da sala
+        tipo_sala = 1. chat, 2. video
+        '''
         self.sala_id = sala_id
+        self.tipo_sala = tipo_sala
         self.lista_ip = []
         self.sockets_connect = {}
         self.fila = Queue()
         self.running = True
-        self.meu_ip = socket.gethostbyname(socket.gethostname())
+        self.meu_ip = subprocess.run("hostname -I | awk '{print $1}'", shell=True, capture_output=True, text=True).stdout.strip()
 
     def subscriber_thread(self) -> None:
         '''
@@ -34,7 +41,7 @@ class room():
                         # aux_socket é uma variavel auxiliar
                         aux_socket = ctx.socket(zmq.SUB)
                         aux_socket.connect(f"tcp://{ip}:52222")
-                        aux_socket.setsockopt(zmq.SUBSCRIBE, str(self.sala_id).encode('utf-8'))
+                        aux_socket.setsockopt(zmq.SUBSCRIBE, '')
                         
                         self.sockets_connect[ip] = aux_socket
                         socket_to_ip[aux_socket] = ip
@@ -50,10 +57,22 @@ class room():
             # ou seja, só retorna os sockets que tiveram alguma resposta.
             socks = dict(poller.poll(100))
             if socks:
-                for sock in socks:
-                    if sock in socket_to_ip:
-                        print(f"{socket_to_ip[sock]}: {sock.recv_multipart()}")
-
+                if self.tipo_sala == 1:
+                    for sock in socks:
+                        if sock in socket_to_ip:
+                            print(f"{socket_to_ip[sock]}: {sock.recv_multipart()}")
+                elif self.tipo_sala == 2:
+                    for sock in socks:
+                        if sock in socket_to_ip:
+                            topic, data, h_bytes, w_bytes, dtype_str = sock.recv_multipart()
+                            height = int.from_bytes(h_bytes, 'little')
+                            width = int.from_bytes(w_bytes, 'little')
+                            dtype = np.dtype(dtype_str.decode('utf-8'))
+                            msg = np.frombuffer(data, dtype=dtype).reshape(height, width, -1)
+                            cv2.imshow(f"{socket_to_ip[sock]}", msg)
+                            if cv2.waitKey(1) & 0xFF == ord('q'):
+                                break
+                            
     def publisher_thread(self) -> None:
         '''
         Publisher é quem publica as mensagens enviadas por esse processo. Ele apenas publica, é função 
@@ -72,7 +91,15 @@ class room():
                 # Pega o primeiro elemento da FIFO para enviar
                 msg = self.fila.get()
                 try:
-                    publisher.send(msg.encode('utf-8'))
+                    if self.tipo_sala == 1:
+                        publisher.send(msg.encode('utf-8'))
+                    elif self.tipo_sala == 2:
+                        publisher.send_multipart([
+                            msg.tobytes(),
+                            msg.shape[0].to_bytes(4, 'little'),
+                            msg.shape[1].to_bytes(4, 'little'),
+                            msg.dtype.str.encode('utf-8')
+                        ])
                 except zmq.ZMQError as e:
                     if e.errno == zmq.ETERM:
                         break           # Interrupted
@@ -94,7 +121,7 @@ class room():
         
         A porta para envio de broadcast é 6002 por default
         '''
-        msg = b"DISCOVER_ROOM" + b"|" + str(self.sala_id).encode('utf-8') + b"|" + self.meu_ip.encode('utf-8')
+        msg = b"DISCOVER_ROOM" + b"|" + str(self.sala_id).encode('utf-8') + b"|" + str(self.tipo_sala).encode('utf-8')
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -136,7 +163,7 @@ class room():
                     print(f"msg_parts[1]: {msg_parts[1]}")
                     print(f"addr do ser humano: {addr_outroPeer}")
     
-                    if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
+                    if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id and int(msg_parts[2]) == self.tipo_sala:
                         if addr_outroPeer[0] not in self.lista_ip:
                             self.lista_ip.append(addr_outroPeer[0])
                             print(f"Alguém esta chamando, seu ip é: {addr_outroPeer[0]}")

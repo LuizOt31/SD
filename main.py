@@ -1,14 +1,45 @@
 from sala import room
 from threading import Thread
-
+import cv2
 import zmq
 
-def sala(sala_id: int) -> None:
+def sala_chat(minha_sala: room) -> None:
+    try:
+        while True:
+            minha_sala.fila.put(input(">>>"))     
+    except KeyboardInterrupt:
+        print("Interrupted")
+        return
+        
+def sala_video(minha_sala: room) -> None:
+    cap = cv2.VideoCapture(0)
+    
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("Erro na captura de frame")
+                break
+                
+            cv2.imshow("Minha Webcam", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            minha_sala.fila.put(frame)
+    except KeyboardInterrupt:
+        print("Interrupted")
+        cap.release()
+        cv2.destroyAllWindows()
+        return
+    
+
+def sala(sala_id: int, tipo_sala: int) -> None:
     '''
-    Criação da sala por aqui
+    Criação da sala por aqui.
+    
+    Inicializa as threads da sala e chama a função da sala respectiva para tipo_sala
     '''
 
-    minha_sala = room(sala_id)
+    minha_sala = room(sala_id, tipo_sala)
 
     p_thread = Thread(target=minha_sala.publisher_thread)
     s_thread = Thread(target=minha_sala.subscriber_thread)
@@ -19,15 +50,11 @@ def sala(sala_id: int) -> None:
     s_thread.start()
     b_thread.start()
     l_thread.start() 
-
-    try:
-        while True:
-            minha_sala.fila.put(f"{minha_sala.sala_id} " + input(">>>"))
-            
-    except KeyboardInterrupt:
-        print("Interrupted")
-        return
-
+    
+    if tipo_sala == 1:
+        sala_chat(minha_sala)
+    elif tipo_sala == 2:
+        sala_video(minha_sala)      
 
 def main():
     '''
@@ -40,10 +67,11 @@ def main():
     '''
 
     print("Seja bem-vindo, digite o número da porta da sala que deseja se conectar")
-    num_sala = int(input())
-
+    num_sala = int(input(">>>"))
+    print("Tipo da sala\nDigite 1 para chat, 2 para video")
+    tipo_sala = int(input(">>>"))
     try:
-        sala(num_sala)
+        sala(num_sala, tipo_sala)
     except KeyboardInterrupt:
         print("Saindo...")
 
