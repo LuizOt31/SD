@@ -3,8 +3,9 @@ from sala_video import sala_video
 from threading import Thread
 import cv2
 import zmq
+import threading
 
-def sala_chat(minha_sala: room) -> None:
+def sala_chat_(minha_sala: sala_chat) -> None:
     try:
         while True:
             minha_sala.fila.put(input(">>>"))     
@@ -12,7 +13,7 @@ def sala_chat(minha_sala: room) -> None:
         print("Interrupted")
         return
         
-def sala_video(minha_sala: room) -> None:
+def sala_video_(minha_sala: sala_video) -> None:
     cap = cv2.VideoCapture(0)
     
     try:
@@ -26,6 +27,12 @@ def sala_video(minha_sala: room) -> None:
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
             minha_sala.fila.put(frame)
+            
+            with minha_sala.fila_lock:
+                for ip_peer in minha_sala.fila_peers:
+                    if not minha_sala.fila_peers[ip_peer].empty():
+                        cv2.imshow(f"{ip_peer}", minha_sala.fila_peers[ip_peer].get())
+                
     except KeyboardInterrupt:
         print("Interrupted")
         cap.release()
@@ -55,9 +62,9 @@ def sala(sala_id: int, tipo_sala: int) -> None:
     l_thread.start() 
     
     if tipo_sala == 1:
-        sala_chat(minha_sala)
+        sala_chat_(minha_sala)
     elif tipo_sala == 2:
-        sala_video(minha_sala)      
+        sala_video_(minha_sala)      
 
 def main():
     '''

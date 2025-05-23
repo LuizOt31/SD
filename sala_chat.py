@@ -31,8 +31,6 @@ class sala_chat():
         '''
         ctx = zmq.Context.instance()
         socket_to_ip = {}
-
-        payload
         
         poller = zmq.Poller()
         
@@ -45,7 +43,7 @@ class sala_chat():
                         # aux_socket é uma variavel auxiliar
                         aux_socket = ctx.socket(zmq.SUB)
                         aux_socket.connect(f"tcp://{ip}:52222")
-                        aux_socket.setsockopt(zmq.SUBSCRIBE, '')
+                        aux_socket.setsockopt(zmq.SUBSCRIBE, b'')
                         
                         self.sockets_connect[ip] = aux_socket
                         socket_to_ip[aux_socket] = ip
@@ -109,7 +107,7 @@ class sala_chat():
         
         A porta para envio de broadcast é 6002 por default
         '''
-        msg = b"DISCOVER_ROOM" + b"|" + str(self.sala_id).encode('utf-8') + b"|" + str(self.tipo_sala).encode('utf-8')
+        msg = b"DISCOVER_ROOM" + b"|" + str(self.sala_id).encode('utf-8')
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -146,7 +144,7 @@ class sala_chat():
 
                 if addr_outroPeer[0] != '127.0.1.1' and addr_outroPeer[0] != '127.0.0.1' and addr_outroPeer[0] != self.meu_ip:
 
-                    if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id and int(msg_parts[2]) == self.tipo_sala:
+                    if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id:
                         if addr_outroPeer[0] not in self.lista_ip:
                             self.lista_ip.append(addr_outroPeer[0])
                             print(f"Alguém esta chamando, seu ip é: {addr_outroPeer[0]}")
