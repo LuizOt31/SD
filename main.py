@@ -38,8 +38,10 @@ def sala(sala_id: int, tipo_sala: int) -> None:
     
     Inicializa as threads da sala e chama a função da sala respectiva para tipo_sala
     '''
-
-    minha_sala = room(sala_id, tipo_sala)
+    if tipo_sala == 1:
+        minha_sala = sala_chat(sala_id)
+    elif tipo_sala == 2:
+        minha_sala = sala_video(sala_id)
 
     p_thread = Thread(target=minha_sala.publisher_thread)
     s_thread = Thread(target=minha_sala.subscriber_thread)

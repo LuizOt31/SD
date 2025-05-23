@@ -5,8 +5,12 @@ import socket
 import subprocess
 import cv2
 import zmq
+import pickle
+import imutils
+import struct
+import io
 
-class room():
+class sala_video():
     def __init__(self, sala_id: int, tipo_sala = 1):
         '''
         sala_id = identificador da sala
@@ -29,6 +33,10 @@ class room():
         '''
         ctx = zmq.Context.instance()
         socket_to_ip = {}
+
+        data = b""
+        payload_size = struct.calcsize(">L")
+        print("payload_size: {}".format(payload_size))
         
         poller = zmq.Poller()
         
@@ -56,22 +64,19 @@ class room():
             # poller.poll() espera 0.1s. Se nenhum socket obteve resposta dos outros peers, retorna {} (dicionario vazio)
             # ou seja, só retorna os sockets que tiveram alguma resposta.
             socks = dict(poller.poll(100))
-            if socks:
-                if self.tipo_sala == 1:
-                    for sock in socks:
-                        if sock in socket_to_ip:
-                            print(f"{socket_to_ip[sock]}: {sock.recv_multipart()}")
-                elif self.tipo_sala == 2:
-                    for sock in socks:
-                        if sock in socket_to_ip:
-                            topic, data, h_bytes, w_bytes, dtype_str = sock.recv_multipart()
-                            height = int.from_bytes(h_bytes, 'little')
-                            width = int.from_bytes(w_bytes, 'little')
-                            dtype = np.dtype(dtype_str.decode('utf-8'))
-                            msg = np.frombuffer(data, dtype=dtype).reshape(height, width, -1)
-                            cv2.imshow(f"{socket_to_ip[sock]}", msg)
-                            if cv2.waitKey(1) & 0xFF == ord('q'):
-                                break
+            # Recebendo Video
+            for sock in socks:
+                if sock in socket_to_ip: # Será q precisa?
+                    topic, frame_data = sock.recv_multipart()
+
+                    frame = cv2.imdecode(
+                        np.frombuffer(frame_data, dtype = np.uint8),
+                        cv2.IMREAD_COLOR
+                    )
+
+                    if frame is not None:
+                        cv2.imshow(f"{socket_to_ip[sock]}", frame)
+                        cv2.waitKey(1)        
                             
     def publisher_thread(self) -> None:
         '''
@@ -85,21 +90,31 @@ class room():
         publisher = ctx.socket(zmq.PUB)
         publisher.bind("tcp://*:52222")
 
+        img_counter = 0
+        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
         while True:
             if not self.fila.empty():
 
                 # Pega o primeiro elemento da FIFO para enviar
                 msg = self.fila.get()
                 try:
-                    if self.tipo_sala == 1:
-                        publisher.send(msg.encode('utf-8'))
-                    elif self.tipo_sala == 2:
+                    frame = imutils.resize(msg, width=320)
+                    frame = cv2.flip(frame, 180)
+
+                    # Codifica o frame para JPEG
+                    result, encoded_image = cv2.imencode('.jpg', frame, encode_param)
+
+                    # data = pickle.dumps(image, 0)
+                    # size = len(data)
+
+                    if img_counter % 10 == 0:
                         publisher.send_multipart([
-                            msg.tobytes(),
-                            msg.shape[0].to_bytes(4, 'little'),
-                            msg.shape[1].to_bytes(4, 'little'),
-                            msg.dtype.str.encode('utf-8')
+                            str(self.sala_id).encode('utf-8'),  # Tópico/filtro
+                            encoded_image.tobytes()  
                         ])
+
+                    img_counter += 1
+
                 except zmq.ZMQError as e:
                     if e.errno == zmq.ETERM:
                         break           # Interrupted
@@ -127,14 +142,14 @@ class room():
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         
         count = 0
-        for _ in range(5):
+        while True:
             if count == 0:
                 print("Mandando em broadcast pela primeira vez, vamo achar alguem!")
                 count += 1
             
             s.sendto(msg, ("<broadcast>", port))
 
-            time.sleep(1)
+            time.sleep(10)
         
         return
         
@@ -158,33 +173,10 @@ class room():
 
                 if addr_outroPeer[0] != '127.0.1.1' and addr_outroPeer[0] != '127.0.0.1' and addr_outroPeer[0] != self.meu_ip:
 
-                    print("Recebi uma requisição de conexão!")
-                    print(f"msg_parts[0]: {msg_parts[0]}")
-                    print(f"msg_parts[1]: {msg_parts[1]}")
-                    print(f"addr do ser humano: {addr_outroPeer}")
-    
                     if msg_parts[0] == "DISCOVER_ROOM" and int(msg_parts[1]) == self.sala_id and int(msg_parts[2]) == self.tipo_sala:
                         if addr_outroPeer[0] not in self.lista_ip:
                             self.lista_ip.append(addr_outroPeer[0])
                             print(f"Alguém esta chamando, seu ip é: {addr_outroPeer[0]}")
-
-                        # Após reconhecer que é a mesma sala, envia uma mensagem dizendo que irá se conectar, para que os dois se conectem
-                        msg = b"ROOM_DISCOVERED" + b"|" + str(self.sala_id).encode('utf-8') + b"|" + self.meu_ip.encode('utf-8')
-
-                        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                        
-                        for _ in range(5):
-                            udp_socket.sendto(msg, addr_outroPeer)
-
-                        udp_socket.close()   
-
-                    # Checagem para ver se consegui descobrir outras pessoas na mesma sala que a minha
-                    elif msg_parts[0] == "ROOM_DISCOVERED" and int(msg_parts[1]) == self.sala_id:
-                        # addr[0] para passar apenas o IP, não precisamos da porta 52223, já que nos conectamos pela 6001
-                        if addr_outroPeer[0] not in self.lista_ip:
-                            self.lista_ip.append(addr_outroPeer[0])
-                            print(f"Mandei e me mandaram de volta o chamado, o ip dele é {addr_outroPeer[0]}")
         
         except KeyboardInterrupt:
             pass
