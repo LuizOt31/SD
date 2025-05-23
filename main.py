@@ -1,4 +1,5 @@
-from sala import room
+from sala_chat import sala_chat
+from sala_video import sala_video
 from threading import Thread
 import cv2
 import zmq
