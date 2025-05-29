@@ -19,13 +19,20 @@ Para A encontrar B para se comunicar, é lançado uma mensagem em broadcast na r
 
 ## Como rodar?
 
-É necessário rodar o ambiente virtual python
+É recomendado rodar um ambiente virtual python 
 
 ```sh
-source bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-Após isso, é necessário apenas rodar
+Após isso, é necessário instalar as dependências 
+
+```sh
+pip install -r requirements.txt
+```
+
+E por fim, rodar o main.py
 
 ```sh
 python3 main.py
